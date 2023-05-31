@@ -1,4 +1,4 @@
-# questdb-beam
+# questdb-beam-py
 
 [Apache Beam python sink](https://beam.apache.org/) for writing data into [QuestDB](https://questdb.io) time-series database
 
@@ -26,7 +26,7 @@ docker run --add-host=host.docker.internal:host-gateway -p 9000:9000 -p 9009:900
 
 Please refer to the [QuestDB Documentation](https://questdb.io/docs/) for alternative ways of starting your QuestDB instance.
 
-The example will insert data on a table named `beamt` (can be changed via the `questdb-table` arg). To run the example, execute:
+The example will insert data on a table named `beam_wc` (can be changed via the `questdb-table` arg). To run the example, execute:
 
 ```
 python -m questdb_beam.example.wordcount_file_to_questdb

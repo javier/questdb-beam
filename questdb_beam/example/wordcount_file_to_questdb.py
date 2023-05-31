@@ -57,7 +57,7 @@ def main(argv=None, save_main_session=True):
   parser.add_argument(
       '--questdb-table',
       dest='questdb_table',
-      default='beamt',
+      default='beam_wc',
       help='Name of the destination QuestDB table')
 
   known_args, pipeline_args = parser.parse_known_args(argv)
