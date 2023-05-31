@@ -1,6 +1,6 @@
 # questdb-beam
 
-[Apache Beam sink](https://beam.apache.org/) for writing data into [QuestDB](https://questdb.io) time-series database
+[Apache Beam python sink](https://beam.apache.org/) for writing data into [QuestDB](https://questdb.io) time-series database
 
 # Basic usage
 
