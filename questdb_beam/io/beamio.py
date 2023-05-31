@@ -20,8 +20,8 @@ class WriteToQuestDB(PTransform):
         """
         Args:
         :param table: table name
-        :param symbols: list of symbols to be sent to the questdb Sender object
-        :param columns: list of columns to be sent to the questdb Sender object
+        :param symbols: list of symbols to be sent to the questdb_beam Sender object
+        :param columns: list of columns to be sent to the questdb_beam Sender object
         :param host: host of your QuestDB server
         :param port: port of the QuestDB server. Defaults to 9009
         :param batch_size: if you want to specify batch size to flush. Defaults to 1000. Sender object will still
@@ -74,6 +74,7 @@ class _WriteToQuestDBFn(DoFn):
         if self.questdb_sink is None:
             self.questdb_sink = _QuestDBSink(table=self.table, symbols=self.symbols, columns=self.columns,
                                              host=self.host, port=self.port, tls=self.tls, auth=self.auth)
+        self.questdb_sink.connect()
 
     def finish_bundle(self):
         self._flush()
@@ -81,7 +82,7 @@ class _WriteToQuestDBFn(DoFn):
     def process(self, element, *args, **kwargs):
         self.questdb_sink.write(element)
         self.batch_counter += 1
-        if len(self.batch_counter) >= self.batch_size:
+        if self.batch_counter >= self.batch_size:
             self._flush()
 
     def _flush(self):
@@ -111,11 +112,13 @@ class _QuestDBSink:
         self.extra_params = extra_params
         self._sender = None
 
-    def _connect(self):
-        try:
-            self._sender = Sender(host=self.host, port=self.port, tls=self.tls, auth=self.auth)
-        except IngressError as e:
-            _LOGGER.error(f'ERROR connecting to QuestDB: {e}\n')
+    def connect(self):
+        if not self.is_connected():
+            try:
+                self._sender = Sender(host=self.host, port=self.port, tls=self.tls, auth=self.auth)
+                self._sender.connect()
+            except IngressError as e:
+                _LOGGER.error(f'ERROR connecting to QuestDB: {e}\n')
 
     def write(self, element):
         try:
@@ -130,19 +133,21 @@ class _QuestDBSink:
         return self._sender is not None
 
     def flush(self):
-        if self.is_connected():
-            try:
-                self._sender.flush()
-            except IngressError as e:
-                _LOGGER.error(f'ERROR flushing to QuestDB: {e}\n')
+        if not self.is_connected():
+            self.connect()
+        try:
+            self._sender.flush()
+        except IngressError as e:
+            _LOGGER.error(f'ERROR flushing to QuestDB: {e}\n')
 
     def close(self):
         if self.is_connected():
             self._sender.close(True)
+        self._sender = None
 
     def __enter__(self):
         if not self.is_connected():
-            self._connect()
+            self.connect()
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
