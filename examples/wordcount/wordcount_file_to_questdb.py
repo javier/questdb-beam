@@ -42,7 +42,7 @@ def main(argv=None, save_main_session=True):
   parser.add_argument(
       '--input',
       dest='input',
-      default='./questdb_beam/example/kinglear.txt',
+      default='./examples/wordcount/kinglear.txt',
       help='Input file to process.')
   parser.add_argument(
       '--questdb-host',

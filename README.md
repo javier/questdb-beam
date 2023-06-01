@@ -15,7 +15,7 @@ pcoll | WriteToQuestDB(table, symbols=[list_of_symbols], columns=[list_of_column
 # Running the example
 
 This repository includes an example based on the [minimal wordcount BEAM example](https://beam.apache.org/get-started/wordcount-example/#minimalwordcount-example).
-Running the example will read words from a file (it defaults to `./questdb_beam/example/kinglear.txt` and can be changed
+Running the example will read words from a file (it defaults to `./examples/wordcount/kinglear.txt` and can be changed
 via the `input` arg) and will output to a questdb instance running at `http://localhost:9009` (can be changed via the
 `questdb-host` and `questdb-port` args). If you don't have an instance, you can start an ephemeral one using Docker with
  this command:
@@ -29,5 +29,5 @@ Please refer to the [QuestDB Documentation](https://questdb.io/docs/) for altern
 The example will insert data on a table named `beam_wc` (can be changed via the `questdb-table` arg). To run the example, execute:
 
 ```
-python -m questdb_beam.example.wordcount_file_to_questdb
+python -m examples.wordcount.wordcount_file_to_questdb
 ```
