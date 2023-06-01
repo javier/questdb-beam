@@ -14,4 +14,4 @@ pcoll | WriteToQuestDB(table, symbols=[list_of_symbols], columns=[list_of_column
 
 # Running the examples
 
-Please refer to the [examples README](./examples/README.md)
+Please refer to the [examples README](./examples/)
