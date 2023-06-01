@@ -43,22 +43,22 @@ def main(argv=None, save_main_session=True):
       '--input',
       dest='input',
       default='./examples/wordcount/kinglear.txt',
-      help='Input file to process.')
+      help='Input file to process. Defaults to ./examples/wordcount/kinglear.txt')
   parser.add_argument(
       '--questdb-host',
       dest='questdb_host',
       default='localhost',
-      help='QuestDB host address.')
+      help='QuestDB host address. Defaults to localhost')
   parser.add_argument(
       '--questdb-port',
       dest='questdb_port',
       default='9009',
-      help='QuestDB port number.')
+      help='QuestDB port number. Defaults to 9009')
   parser.add_argument(
       '--questdb-table',
       dest='questdb_table',
       default='beam_wc',
-      help='Name of the destination QuestDB table')
+      help='Name of the destination QuestDB table. Defaults to beam_wc')
 
   known_args, pipeline_args = parser.parse_known_args(argv)
 
