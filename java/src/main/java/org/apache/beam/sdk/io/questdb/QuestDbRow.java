@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
+
 public class QuestDbRow implements Serializable {
     private final Map<String, String> symbolColumns = new HashMap<>();
     private final Map<String, String> stringColumns = new HashMap<>();
@@ -14,7 +15,8 @@ public class QuestDbRow implements Serializable {
     private final Map<String, Long> timestampColumns = new HashMap<>();
     private Long designatedTimestamp = null;
 
-    public QuestDbRow() {}
+    public QuestDbRow() {
+    }
 
     public boolean hasSymbolColumns() {
         return !symbolColumns.isEmpty();
@@ -91,27 +93,18 @@ public class QuestDbRow implements Serializable {
     }
 
     public QuestDbRow putTimestampMs(String name, Long value) {
-        return putTimestamp(name, value * 1000L );
+        return putTimestamp(name, value * 1000L);
     }
 
     public QuestDbRow putTimestampMs(String name, String value) {
-        return putTimestampMs(name, Long.valueOf(value) );
-    }
-
-    public QuestDbRow setDesignatedTimestamp(Long value) {
-        designatedTimestamp = value;
-        return this;
-    }
-
-    public QuestDbRow setDesignatedTimestamp(String value) {
-        return setDesignatedTimestamp(Long.valueOf(value));
+        return putTimestampMs(name, Long.valueOf(value));
     }
 
     public QuestDbRow setDesignatedTimestampMs(Long value) {
         return setDesignatedTimestamp(value * 1000000L);
     }
 
-    public QuestDbRow setDesignatedTimestampMs( String value) {
+    public QuestDbRow setDesignatedTimestampMs(String value) {
         return setDesignatedTimestampMs(Long.valueOf(value));
     }
 
@@ -143,8 +136,17 @@ public class QuestDbRow implements Serializable {
         return designatedTimestamp;
     }
 
-    public boolean equals(Object otherObject) {
-        if ( !(otherObject instanceof QuestDbRow)) return false;
+    public QuestDbRow setDesignatedTimestamp(Long value) {
+        designatedTimestamp = value;
+        return this;
+    }
+
+    public QuestDbRow setDesignatedTimestamp(String value) {
+        return setDesignatedTimestamp(Long.valueOf(value));
+    }
+
+    public boolean equalxs(Object otherObject) {
+        if (!(otherObject instanceof QuestDbRow)) return false;
 
         QuestDbRow other = (QuestDbRow) otherObject;
         return this.getBooleanColumns().equals(other.getBooleanColumns()) &&
@@ -157,4 +159,21 @@ public class QuestDbRow implements Serializable {
                 ;
     }
 
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        QuestDbRow that = (QuestDbRow) o;
+        return getSymbolColumns().equals(that.getSymbolColumns()) && getStringColumns().equals(that.getStringColumns()) && getLongColumns().equals(that.getLongColumns()) && getDoubleColumns().equals(that.getDoubleColumns()) && getBooleanColumns().equals(that.getBooleanColumns()) && getTimestampColumns().equals(that.getTimestampColumns()) && getDesignatedTimestamp().equals(that.getDesignatedTimestamp());
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(getSymbolColumns(), getStringColumns(), getLongColumns(), getDoubleColumns(), getBooleanColumns(), getTimestampColumns(), getDesignatedTimestamp());
+    }
+
+    public int hashCodeWithoutDesignatedTimestamp() {
+        return Objects.hash(getSymbolColumns(), getStringColumns(), getLongColumns(), getDoubleColumns(), getBooleanColumns(), getTimestampColumns());
+    }
 }

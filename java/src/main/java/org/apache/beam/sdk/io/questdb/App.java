@@ -22,8 +22,6 @@ import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.TypeDescriptors;
 import org.apache.kafka.common.serialization.StringDeserializer;
 
-import java.util.List;
-
 public class App {
     public static void buildKafkaPipeline(Pipeline pipeline, String topic) {
         PCollection linesFromKafka = pipeline
@@ -43,17 +41,21 @@ public class App {
                         })
                 );
 
+
         PCollection parsedLines = (PCollection) linesFromKafka.apply(ParDo.of(new LineToMapFn()));
 
-        parsedLines.apply(QuestDbIO.write()
-                //.withUri("localhost:9009")
-                .withUri("javier-demo-d9079585.ilp.b1t9.questdb.com:32064")
-                .withTable("author2")
-                .withSSLEnabled(true)
-                .withAuthEnabled(true)
-                .withAuthUser("admin")
-                .withAuthToken("gPxQcmPFf66eVb-_SavSqsBOym4_emQUynEE4s6BnJY")
-        );
+        parsedLines
+                .apply(QuestDbIO.write()
+                        .withUri("localhost:9009")
+                        .withTable("beam_test")
+                        .withDeduplicationEnabled(true)
+                        .withDeduplicationByValue(false)
+                        .withDeduplicationDurationMillis(5L)
+                        .withSSLEnabled(false)
+                        .withAuthEnabled(false)
+                        .withAuthUser("admin")
+                        .withAuthToken("ignore")
+                );
     }
 
     public static void main(String[] args) {
@@ -77,12 +79,11 @@ public class App {
             String[] values = element.split(",");
             QuestDbRow row =
                     new QuestDbRow()
-                    .putSymbol("user_id", values[0])
-                    .putSymbol("team_id", values[1])
-                    .putLong("score", values[2])
-                    .putTimestampMs("timestampED", values[3])
-                    .setDesignatedTimestampMs(values[3])
-                    ;
+                            .putSymbol("user_id", values[0])
+                            .putSymbol("team_id", values[1])
+                            .putLong("score", values[2])
+                            .putTimestampMs("timestampED", values[3])
+                            .setDesignatedTimestampMs(values[3]);
             receiver.output(row);
         }
     }

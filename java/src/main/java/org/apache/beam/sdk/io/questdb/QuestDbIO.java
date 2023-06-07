@@ -3,15 +3,14 @@ package org.apache.beam.sdk.io.questdb;
 import com.google.auto.value.AutoValue;
 import io.questdb.client.Sender;
 import io.questdb.client.Sender.LineSenderBuilder;
-import org.apache.beam.sdk.transforms.DoFn;
-import org.apache.beam.sdk.transforms.PTransform;
-import org.apache.beam.sdk.transforms.ParDo;
+import org.apache.beam.sdk.transforms.*;
 import org.apache.beam.sdk.transforms.display.DisplayData;
 import org.apache.beam.sdk.util.Preconditions;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.PDone;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.checkerframework.dataflow.qual.Pure;
+import org.joda.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,6 +32,9 @@ public class QuestDbIO {
         return new AutoValue_QuestDbIO_Write.Builder()
                 .setSslEnabled(false)
                 .setAuthEnabled(false)
+                .setDeduplicationEnabled(false)
+                .setDeduplicationByValue(false)
+                .setDeduplicationDurationMillis(1500L)
                 .build();
     }
 
@@ -59,6 +61,16 @@ public class QuestDbIO {
 
         @Pure
         abstract @Nullable String authToken();
+
+        @Pure
+        abstract @Nullable Boolean deduplicationEnabled();
+
+        @Pure
+        abstract @Nullable Boolean deduplicationByValue();
+
+        @Pure
+        abstract @Nullable Long deduplicationDurationMillis();
+
 
         @Pure
         abstract QuestDbIO.Write.Builder builder();
@@ -107,12 +119,57 @@ public class QuestDbIO {
             return builder().setAuthToken(token).build();
         }
 
+        /**
+         * Enable deduplication for connection.
+         */
+        public QuestDbIO.Write withDeduplicationEnabled(boolean deduplicationEnabled) {
+            return builder().setDeduplicationEnabled(deduplicationEnabled).build();
+        }
+
+        /**
+         * Ignore designated timestamp when doing deduplocation. If true, all the columns
+         * except designated timestamp will be used for deduplication. If false, designated
+         * timestamp will also need to match to be considered a duplicate.
+         */
+        public QuestDbIO.Write withDeduplicationByValue(boolean deduplicationByValue) {
+            return builder().setDeduplicationByValue(deduplicationByValue).build();
+        }
+
+        /**
+         * Deduplication interval in milliseconds
+         */
+        public QuestDbIO.Write withDeduplicationDurationMillis(Long deduplicationDurationMillis) {
+            return builder().setDeduplicationDurationMillis(deduplicationDurationMillis).build();
+        }
+
 
         @Override
         public PDone expand(PCollection<QuestDbRow> input) {
             checkArgument(uri() != null, "withUri() is required");
             checkArgument(table() != null, "withTable() is required");
 
+            if (deduplicationEnabled()) {
+                PCollection keyedRows = null;
+                if (deduplicationByValue()) {
+                    keyedRows = (PCollection) input.apply(WithKeys.of(new SerializableFunction<QuestDbRow, Integer>() {
+                        @Override
+                        public Integer apply(QuestDbRow r) {
+                            return r.hashCodeWithoutDesignatedTimestamp();
+                        }
+                    }));
+                } else {
+                    keyedRows = (PCollection) input.apply(WithKeys.of(new SerializableFunction<QuestDbRow, Integer>() {
+                        @Override
+                        public Integer apply(QuestDbRow r) {
+                            return r.hashCode();
+                        }
+                    }));
+                }
+
+
+                PCollection uniqueKeyedRows = (PCollection) keyedRows.apply(Deduplicate.keyedValues().withDuration(Duration.millis(deduplicationDurationMillis())));
+                input = (PCollection) uniqueKeyedRows.apply(Values.create());
+            }
             input.apply(ParDo.of(new QuestDbIO.Write.WriteFn(this)));
             return PDone.in(input.getPipeline());
         }
@@ -137,6 +194,12 @@ public class QuestDbIO {
             abstract QuestDbIO.Write.Builder setAuthUser(String value);
 
             abstract QuestDbIO.Write.Builder setAuthToken(String value);
+
+            abstract QuestDbIO.Write.Builder setDeduplicationEnabled(Boolean value);
+
+            abstract QuestDbIO.Write.Builder setDeduplicationByValue(Boolean value);
+
+            abstract QuestDbIO.Write.Builder setDeduplicationDurationMillis(Long value);
 
             abstract QuestDbIO.Write build();
         }
@@ -196,7 +259,7 @@ public class QuestDbIO {
                         sender.boolColumn(entry.getKey(), entry.getValue());
                 }
                 if (row.hasDesignatedTimestamp()) {
-                    sender.at( row.getDesignatedTimestamp());
+                    sender.at(row.getDesignatedTimestamp());
                 } else {
                     sender.atNow();
                 }

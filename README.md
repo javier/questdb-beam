@@ -26,6 +26,7 @@ pcoll.apply(ParDo.of(new LineToMapFn()));
         parsedLines.apply(QuestDbIO.write()
                 .withUri("localhost:9009")
                 .withTable("beam_demo")
+                .withDeduplicationEnabled(true)
         );
 ```
 

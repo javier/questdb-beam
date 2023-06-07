@@ -20,6 +20,8 @@ If `setDesignatedTimesamp` is not called, the server will assign a timestamp on 
 to be [in nanoseconds](https://questdb.io/docs/reference/clients/java_ilp/). If your epoch for the designated timestamp
 is in milliseconds, you can call `setDesignatedTimestampMs` and it will be converted.
 
+Deduplication can optionally be done. It is controlled by the parameters `withDeduplicationEnabled`, `withDeduplicationByValue`,
+and `withDeduplicationDurationMillis` (defaults to 1000L).
 
 ```
 static class LineToMapFn extends DoFn<String, QuestDbRow> {
@@ -44,6 +46,9 @@ pcoll.apply(ParDo.of(new LineToMapFn()));
         parsedLines.apply(QuestDbIO.write()
                 .withUri("localhost:9009")
                 .withTable("beam_demo")
+                .withDeduplicationEnabled(true)
+                .withDeduplicationByValue(false)
+                .withDeduplicationDurationMillis(5L)
         );
 ```
 
@@ -54,6 +59,9 @@ pcoll.apply(ParDo.of(new LineToMapFn()));
     parsedLines.apply(QuestDbIO.write()
     .withUri("your-instance-host.questdb.com:YOUR_PORT")
     .withTable("beam_demo")
+    .withDeduplicationEnabled(true)
+    .withDeduplicationByValue(false)
+    .withDeduplicationDurationMillis(5L)
     .withSSLEnabled(true)
     .withAuthEnabled(true)
     .withAuthUser("admin")
