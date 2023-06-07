@@ -1,4 +1,11 @@
-/venv/
+.DS_Store
+/python/venv/
 /.idea/
 /.vscode/
+*.iml
+*.pyc
+*.iml
+*.pyc
+.idea/
+target/
 
