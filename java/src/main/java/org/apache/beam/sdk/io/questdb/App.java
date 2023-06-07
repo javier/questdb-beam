@@ -10,10 +10,6 @@ package org.apache.beam.sdk.io.questdb;
 
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.io.kafka.KafkaIO;
-import org.apache.beam.sdk.io.questdb.columns.LongColumn;
-import org.apache.beam.sdk.io.questdb.columns.QuestDbColumn;
-import org.apache.beam.sdk.io.questdb.columns.SymbolColumn;
-import org.apache.beam.sdk.io.questdb.columns.TimestampColumn;
 import org.apache.beam.sdk.options.Default;
 import org.apache.beam.sdk.options.Description;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
@@ -26,9 +22,7 @@ import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.TypeDescriptors;
 import org.apache.kafka.common.serialization.StringDeserializer;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 public class App {
     public static void buildKafkaPipeline(Pipeline pipeline, String topic) {
@@ -54,9 +48,6 @@ public class App {
         parsedLines.apply(QuestDbIO.write()
                 .withUri("localhost:9009")
                 .withTable("author2")
-                .withSymbolColumns(List.of("user_id", "team_id"))
-                .withLongColumns(List.of("score"))
-                .withDesignatedTimestampColumn("timestampED")
         );
     }
 
@@ -75,16 +66,19 @@ public class App {
         void setInputTopic(String value);
     }
 
-    static class LineToMapFn extends DoFn<String, Map<String, QuestDbColumn>> {
+    static class LineToMapFn extends DoFn<String, QuestDbRow> {
         @ProcessElement
-        public void processElement(@Element String element, OutputReceiver<Map<String, QuestDbColumn>> receiver) throws Exception {
-            Map<String, QuestDbColumn> elementMap = new HashMap<String, QuestDbColumn>();
+        public void processElement(@Element String element, OutputReceiver<QuestDbRow> receiver) throws Exception {
             String[] values = element.split(",");
-            elementMap.put("user_id", new SymbolColumn(values[0]));
-            elementMap.put("team_id", new SymbolColumn(values[1]));
-            elementMap.put("score", new LongColumn(Long.valueOf(values[2])));
-            elementMap.put("timestampED", new TimestampColumn(Long.valueOf(values[3]) * 1000000));
-            receiver.output(elementMap);
+            QuestDbRow row =
+                    new QuestDbRow()
+                    .putSymbol("user_id", values[0])
+                    .putSymbol("team_id", values[1])
+                    .putLong("score", values[2])
+                    .putTimestampMs("timestampED", values[3])
+                    .setDesignatedTimestampMs(values[3])
+                    ;
+            receiver.output(row);
         }
     }
 }

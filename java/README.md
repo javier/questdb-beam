@@ -7,42 +7,46 @@ The Sink supports both batch and streaming.
 
 ## Basic usage
 
-A pcollection of elements (of type `Map`) can be passed to the QuestDB sink. `withUri` and `withTable` parameters are
-mandatory. If `withDesignatedTimestampColumn` is defined, that column will be used as the designated timestamp (make
-sure you have [the right epoch resolution](https://questdb.io/docs/reference/clients/java_ilp/)). Otherwise, the
-timestamp will be assigned by the server on ingestion. You can pass the names and types of the columns you want the
-Sink to output using the parameters `withSymbolColumns`, `withStringColumns`, `withLongColumns`, `withDoubleColumns`,
-`withBoolColumns`, and `withTimestampColumns`. Please note not designated timestamps use epoch in milliseconds. If
-SSL is needed, you can use `withSSLEnabled` as a boolean. The column values are constructed using the classes from the
-`org.apache.beam.sdk.io.questdb.columns` package.
+The QuestDB Sink is called by passing a PCollection of `QuestDbRow` elements to `QuestDbIO.write()`. `withUri` and 
+`withTable` parameters are mandatory.  If SSL is needed, you can use `withSSLEnabled` as a boolean. 
+
+The `QuestDbRow` has methods to put columns of the supported types. All the put methods accept either the native type 
+(i.e. `Long` when using `putLong`) or a `String` that will be converted to the native type. `putTimestamp` expects 
+the epoch in microseconds. For your convenience, if your epoch is in milliseconds you can call `putTimestampMs` and it
+will be converted. 
+
+If `setDesignatedTimesamp` is not called, the server will assign a timestamp on ingestion. Designated timestamp needs
+to be [in nanoseconds](https://questdb.io/docs/reference/clients/java_ilp/). If your epoch for the designated timestamp
+is in milliseconds, you can call `setDesignatedTimestampMs` and it will be converted.
+
 
 For Authentication you need to set the boolean
  `withAuthEnabled` and provide `withAuthUser` and `withAuthToken` strings.
 
 ```
-static class LineToMapFn extends DoFn<String, Map<String, QuestDbColumn>> {
+static class LineToMapFn extends DoFn<String, QuestDbRow> {
         @ProcessElement
-        public void processElement(@Element String element, OutputReceiver<Map<String, QuestDbColumn>> receiver) throws Exception {
-            Map<String, QuestDbColumn> elementMap = new HashMap<String, QuestDbColumn>();
+        public void processElement(@Element String element, OutputReceiver<QuestDbRow> receiver) throws Exception {
             String[] values = element.split(",");
-            elementMap.put("user_id", new SymbolColumn(values[0]));
-            elementMap.put("team_id", new SymbolColumn(values[1]));
-            elementMap.put("score", new LongColumn(Long.valueOf(values[2])));
-            elementMap.put("timestampED", new TimestampColumn(Long.valueOf(values[3]) * 1000000));
-            receiver.output(elementMap);
+            QuestDbRow row =
+                    new QuestDbRow()
+                    .putSymbol("user_id", values[0])
+                    .putSymbol("team_id", values[1])
+                    .putLong("score", values[2])
+                    .putTimestampMs("timestampED", values[3])
+                    .setDesignatedTimestampMs(values[3]);
+            receiver.output(row);
         }
     }
     
 
 (....)
     
-pcoll.apply(QuestDbIO.write()
-  .withUri("localhost:9009")
-  .withTable("author2")
-  .withSymbolColumns(List.of("user_id", "team_id"))  
-  .withLongColumns(List.of("score"))
-  .withDesignatedTimestampColumn("timestampED")
-  );
+pcoll.apply(ParDo.of(new LineToMapFn()));
+        parsedLines.apply(QuestDbIO.write()
+                .withUri("localhost:9009")
+                .withTable("author2")
+        );
 ```
 
 ## Building the project

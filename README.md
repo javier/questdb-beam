@@ -20,14 +20,13 @@ pcoll | WriteToQuestDB(table, symbols=[list_of_symbols], columns=[list_of_column
 # Basic JAVA usage
 
 ```
-pcoll.apply(QuestDbIO.write()
-	.withUri("localhost:9009")
-	.withTable("author2")
-	.withSymbolColumns(List.of("user_id", "team_id")) 
-	.withStringColumns(List.of("team_id"))
-	.withLongColumns(List.of("score"))
-	.withDesignatedTimestampColumn("timestampED")
-	);
+// pcoll needs to be a PCollection with QuestDbRow objects
+
+pcoll.apply(ParDo.of(new LineToMapFn()));
+        parsedLines.apply(QuestDbIO.write()
+                .withUri("localhost:9009")
+                .withTable("author2")
+        );
 ```
 
 # Running the examples
