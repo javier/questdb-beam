@@ -20,45 +20,17 @@ import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.beam.sdk.options.StreamingOptions;
 import org.apache.beam.sdk.transforms.*;
 import org.apache.beam.sdk.values.PCollection;
-import org.apache.beam.sdk.values.PDone;
 import org.apache.beam.sdk.values.TypeDescriptors;
 import org.apache.beam.sdk.io.kafka.KafkaIO;
 import org.apache.kafka.common.serialization.StringDeserializer;
 
 public class App {
 	public interface Options extends StreamingOptions {
-		@Description("Input text to print.")
+		@Description("Kafka topic to read from")
 		@Default.String("echo-output")
-		String getInputText();
+		String getInputTopic();
 
-		void setInputText(String value);
-	}
-
-	public static PCollection<String> buildPipeline(Pipeline pipeline, String inputText) {
-		return pipeline
-				.apply("Create elements", Create.of(Arrays.asList("Hello", "World!", inputText)))
-				.apply("Print elements",
-						MapElements.into(TypeDescriptors.strings()).via(x -> {
-							System.out.println(x);
-							return x;
-						}));
-	}
-
-	static class ExtractWordsFn extends DoFn<String, String> {
-
-		@ProcessElement
-		public void processElement(@Element String element, OutputReceiver<String> receiver) {
-
-			// Split the line into words.
-			String[] words = element.split(",");
-
-			// Output each word encountered into the output PCollection.
-			for (String word : words) {
-				if (!word.isEmpty()) {
-					receiver.output(word);
-				}
-			}
-		}
+		void setInputTopic(String value);
 	}
 
 	static class LineToMap extends DoFn<String, Map> {
@@ -84,7 +56,7 @@ public class App {
 				.withoutMetadata()
 				)
 				.apply(Values.create())
-				.apply(ParDo.of(new QuestDBOutFn()))
+				//.apply(ParDo.of(new QuestDBOutFn()))
 				.apply("Print elements",
 						MapElements.into(TypeDescriptors.strings()).via(x -> {
 							System.out.println(x);
@@ -116,14 +88,11 @@ public class App {
 						.withLongColumns(List.of("score"))
 						.withDesignatedTimestampColumn("timestampED")
 				);
-				//.apply(Window.into(FixedWindows.of(Duration.standardSeconds(10))))
-
-		;
 	}
 	public static void main(String[] args) {
 		var options = PipelineOptionsFactory.fromArgs(args).withValidation().as(Options.class);
 		var pipeline = Pipeline.create(options);
-		App.buildKafkaPipeline(pipeline, options.getInputText());
+		App.buildKafkaPipeline(pipeline, options.getInputTopic());
 		pipeline.run().waitUntilFinish();
 	}
 }
