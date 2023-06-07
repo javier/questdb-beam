@@ -25,7 +25,7 @@ pcoll | WriteToQuestDB(table, symbols=[list_of_symbols], columns=[list_of_column
 pcoll.apply(ParDo.of(new LineToMapFn()));
         parsedLines.apply(QuestDbIO.write()
                 .withUri("localhost:9009")
-                .withTable("author2")
+                .withTable("beam_demo")
         );
 ```
 

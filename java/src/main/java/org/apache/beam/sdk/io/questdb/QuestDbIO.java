@@ -2,6 +2,7 @@ package org.apache.beam.sdk.io.questdb;
 
 import com.google.auto.value.AutoValue;
 import io.questdb.client.Sender;
+import io.questdb.client.Sender.LineSenderBuilder;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.ParDo;
@@ -45,20 +46,37 @@ public class QuestDbIO {
         abstract @Nullable String uri();
 
         @Pure
+        abstract @Nullable String table();
+
+        @Pure
         abstract boolean sslEnabled();
 
         @Pure
         abstract boolean authEnabled();
 
         @Pure
-        abstract @Nullable String table();
+        abstract @Nullable String authUser();
+
+        @Pure
+        abstract @Nullable String authToken();
 
         @Pure
         abstract QuestDbIO.Write.Builder builder();
 
+        /**
+         * Sets the host and port of the database instance.
+         */
         public QuestDbIO.Write withUri(String uri) {
             checkArgument(uri != null, "uri can not be null");
             return builder().setUri(uri).build();
+        }
+
+        /**
+         * Sets the table where to write data in the database.
+         */
+        public QuestDbIO.Write withTable(String table) {
+            checkArgument(table != null, "table can not be null");
+            return builder().setTable(table).build();
         }
 
         /**
@@ -76,11 +94,17 @@ public class QuestDbIO {
         }
 
         /**
-         * Sets the collection where to write data in the database.
+         * Sets the user name for authenticated connections
          */
-        public QuestDbIO.Write withTable(String table) {
-            checkArgument(table != null, "table can not be null");
-            return builder().setTable(table).build();
+        public QuestDbIO.Write withAuthUser(String user) {
+            return builder().setAuthUser(user).build();
+        }
+
+        /**
+         * Sets the secret token for authenticated connections
+         */
+        public QuestDbIO.Write withAuthToken(String token) {
+            return builder().setAuthToken(token).build();
         }
 
 
@@ -104,11 +128,15 @@ public class QuestDbIO {
         abstract static class Builder {
             abstract QuestDbIO.Write.Builder setUri(String uri);
 
+            abstract QuestDbIO.Write.Builder setTable(String table);
+
             abstract QuestDbIO.Write.Builder setSslEnabled(boolean value);
 
             abstract QuestDbIO.Write.Builder setAuthEnabled(boolean value);
 
-            abstract QuestDbIO.Write.Builder setTable(String table);
+            abstract QuestDbIO.Write.Builder setAuthUser(String value);
+
+            abstract QuestDbIO.Write.Builder setAuthToken(String value);
 
             abstract QuestDbIO.Write build();
         }
@@ -124,7 +152,14 @@ public class QuestDbIO {
             @Setup
             public void createQuestDbClient() {
                 String uri = Preconditions.checkStateNotNull(spec.uri());
-                sender = Sender.builder().address(spec.uri()).build(); //TODO
+                LineSenderBuilder senderBuilder = Sender.builder().address(spec.uri());
+                if (spec.sslEnabled())
+                    senderBuilder.enableTls();
+
+                if (spec.authEnabled() && !spec.authUser().isBlank() && !spec.authToken().isBlank())
+                    senderBuilder.enableAuth(spec.authUser()).authToken(spec.authToken());
+
+                sender = senderBuilder.build();
             }
 
             @StartBundle

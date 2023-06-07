@@ -46,8 +46,13 @@ public class App {
         PCollection parsedLines = (PCollection) linesFromKafka.apply(ParDo.of(new LineToMapFn()));
 
         parsedLines.apply(QuestDbIO.write()
-                .withUri("localhost:9009")
+                //.withUri("localhost:9009")
+                .withUri("javier-demo-d9079585.ilp.b1t9.questdb.com:32064")
                 .withTable("author2")
+                .withSSLEnabled(true)
+                .withAuthEnabled(true)
+                .withAuthUser("admin")
+                .withAuthToken("gPxQcmPFf66eVb-_SavSqsBOym4_emQUynEE4s6BnJY")
         );
     }
 

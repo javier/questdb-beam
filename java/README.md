@@ -8,7 +8,8 @@ The Sink supports both batch and streaming.
 ## Basic usage
 
 The QuestDB Sink is called by passing a PCollection of `QuestDbRow` elements to `QuestDbIO.write()`. `withUri` and 
-`withTable` parameters are mandatory.  If SSL is needed, you can use `withSSLEnabled` as a boolean. 
+`withTable` parameters are mandatory.  If SSL is needed, you can use `withSSLEnabled` as a boolean. For authentication 
+you need to set the boolean `withAuthEnabled` and provide `withAuthUser` and `withAuthToken` strings.
 
 The `QuestDbRow` has methods to put columns of the supported types. All the put methods accept either the native type 
 (i.e. `Long` when using `putLong`) or a `String` that will be converted to the native type. `putTimestamp` expects 
@@ -19,9 +20,6 @@ If `setDesignatedTimesamp` is not called, the server will assign a timestamp on 
 to be [in nanoseconds](https://questdb.io/docs/reference/clients/java_ilp/). If your epoch for the designated timestamp
 is in milliseconds, you can call `setDesignatedTimestampMs` and it will be converted.
 
-
-For Authentication you need to set the boolean
- `withAuthEnabled` and provide `withAuthUser` and `withAuthToken` strings.
 
 ```
 static class LineToMapFn extends DoFn<String, QuestDbRow> {
@@ -45,8 +43,21 @@ static class LineToMapFn extends DoFn<String, QuestDbRow> {
 pcoll.apply(ParDo.of(new LineToMapFn()));
         parsedLines.apply(QuestDbIO.write()
                 .withUri("localhost:9009")
-                .withTable("author2")
+                .withTable("beam_demo")
         );
+```
+
+For authentication use:
+
+```
+pcoll.apply(ParDo.of(new LineToMapFn()));
+    parsedLines.apply(QuestDbIO.write()
+    .withUri("your-instance-host.questdb.com:YOUR_PORT")
+    .withTable("beam_demo")
+    .withSSLEnabled(true)
+    .withAuthEnabled(true)
+    .withAuthUser("admin")
+    .withAuthToken("verySecretToken")
 ```
 
 ## Building the project
