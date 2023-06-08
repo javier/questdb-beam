@@ -1,11 +1,11 @@
-# questdb-beam: Apache Beam Sink for QuestDB in Python and JAVA
+# questdb-beam: Apache Beam Sink for QuestDB in Python and Java
 
 [Apache Beam python sink](https://beam.apache.org/) for writing data into [QuestDB](https://questdb.io) time-series
 database.
 
 We offer two versions:
 
-* [JAVA Sink](./java/)
+* [Java Sink](./java/)
 * [Python Sink](./python/). Please note that since Python streaming is not well supported in many of the Beam runners (including
 the direct runner and the Flink portable one), you might prefer to use the JAVA version in streaming scenarios.
 

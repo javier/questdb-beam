@@ -1,6 +1,6 @@
-# questdb-beam: Apache Beam Sink for QuestDB in JAVA
+# questdb-beam: Apache Beam Sink for QuestDB in Java
 
-[Apache Beam JAVA sink](https://beam.apache.org/) for writing data into [QuestDB](https://questdb.io) time-series
+[Apache Beam Java sink](https://beam.apache.org/) for writing data into [QuestDB](https://questdb.io) time-series
 database.
 
 The Sink supports both batch and streaming.
