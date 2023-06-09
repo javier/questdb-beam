@@ -70,8 +70,11 @@ pcoll.apply(ParDo.of(new LineToMapFn()));
 
 ## Building the project
 
+Warning: You need Java11, as otherwise the Flink runner will fail. If you are not planning to use Flink, you can change 
+the pom file to use Java17.
+
 ```sh
-# To do a simple run.
+# To do a simple run using the direct runner
 mvn compile exec:java
 
 # To run passing command line arguments.
@@ -87,5 +90,22 @@ mvn clean package
 # Run the jar application.
 java -jar target/questdb-beam-1-jar-with-dependencies.jar -inputTopic="echo-output"
 ```
+
+### Running on top of Apache Flink
+
+Make sure you are using Java 11.
+
+To run the pipeline using Flink locally run:
+```sh
+mvn compile exec:java -Dexec.args="--runner=FlinkRunner" -Pflink-runner
+```
+
+To execute on a Flink cluster, you can run:
+
+```shell
+mvn clean package exec:java -Dexec.mainClass=org.apache.beam.sdk.io.questdb.App -Dexec.args="--runner=FlinkRunner --flinkMaster=localhost:8081 --filesToStage=target/questdb-beam-1.jar" -Pflink-runner
+
+```
+
 
 
