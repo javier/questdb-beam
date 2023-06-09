@@ -24,6 +24,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Random;
@@ -63,8 +64,8 @@ public class Injector {
     private static Random random = new Random();
 
     // QPS ranges from 800 to 1000.
-    private static final int MIN_QPS = 2; //800;
-    private static final int QPS_RANGE = 1; //200;
+    private static final int MIN_QPS = 1000; //800;
+    private static final int QPS_RANGE = 500; //200;
     // How long to sleep, in ms, between creation of the threads that make API requests to PubSub.
     private static final int THREAD_SLEEP_MS = 1000;
 
@@ -289,6 +290,12 @@ public class Injector {
     /** Add time info to a generated gaming event. */
     private static String addTimeInfoToEvent(String message, Long currTime, int delayInMillis) {
         String eventTimeString = Long.toString((currTime - delayInMillis) / 1000 * 1000);
+
+        Instant inst = Instant.now();
+        long time = inst.getEpochSecond();
+        time *= 1000000000L; //convert to nanoseconds
+        time += inst.getNano();
+        eventTimeString = Long.toString(time);
         // Add a (redundant) 'human-readable' date string to make the data semantics more clear.
         String dateString = DATE_TIME_FORMATTER.print(currTime);
         message = message + "," + eventTimeString + "," + dateString;
