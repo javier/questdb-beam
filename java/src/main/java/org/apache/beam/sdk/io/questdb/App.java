@@ -8,19 +8,24 @@
 
 package org.apache.beam.sdk.io.questdb;
 
+import org.apache.beam.examples.WindowExample;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.io.kafka.KafkaIO;
 import org.apache.beam.sdk.options.Default;
 import org.apache.beam.sdk.options.Description;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.beam.sdk.options.StreamingOptions;
-import org.apache.beam.sdk.transforms.DoFn;
-import org.apache.beam.sdk.transforms.MapElements;
-import org.apache.beam.sdk.transforms.ParDo;
-import org.apache.beam.sdk.transforms.Values;
+import org.apache.beam.sdk.transforms.*;
+import org.apache.beam.sdk.transforms.windowing.FixedWindows;
+import org.apache.beam.sdk.transforms.windowing.Sessions;
+import org.apache.beam.sdk.transforms.windowing.Window;
+import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
+import org.apache.beam.sdk.values.POutput;
 import org.apache.beam.sdk.values.TypeDescriptors;
 import org.apache.kafka.common.serialization.StringDeserializer;
+import org.joda.time.Duration;
+import org.joda.time.Instant;
 
 public class App {
     public static void buildKafkaPipeline(Pipeline pipeline, String topic) {
@@ -44,23 +49,27 @@ public class App {
 
         PCollection parsedLines = (PCollection) linesFromKafka.apply(ParDo.of(new LineToMapFn()));
 
+
         parsedLines
                 .apply(QuestDbIO.write()
                         .withUri("localhost:9009")
                         .withTable("beam_test")
                         .withDeduplicationEnabled(true)
                         .withDeduplicationByValue(false)
-                        .withDeduplicationDurationMillis(5L)
+                        .withDeduplicationDurationMillis(10L)
                         .withSSLEnabled(false)
                         .withAuthEnabled(false)
                         .withAuthUser("admin")
                         .withAuthToken("ignore")
                 );
+
+
     }
 
     public static void main(String[] args) {
         var options = PipelineOptionsFactory.fromArgs(args).withValidation().as(Options.class);
         var pipeline = Pipeline.create(options);
+
         App.buildKafkaPipeline(pipeline, options.getInputTopic());
         pipeline.run().waitUntilFinish();
     }
@@ -82,9 +91,9 @@ public class App {
                             .putSymbol("user_id", values[0])
                             .putSymbol("team_id", values[1])
                             .putLong("score", values[2])
-                            .putTimestampMs("timestampED", values[3])
-                            .setDesignatedTimestampMs(values[3]);
-            receiver.output(row);
+                            .putTimestamp("timestampED", values[3].substring(0,values[3].length() - 3))
+                            .setDesignatedTimestamp(values[3]);
+            receiver.outputWithTimestamp(row, Instant.ofEpochMilli(Long.valueOf(values[3].substring(0,values[3].length() - 3))));
         }
     }
 }

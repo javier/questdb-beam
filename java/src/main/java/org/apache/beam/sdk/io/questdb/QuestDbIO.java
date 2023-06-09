@@ -3,9 +3,13 @@ package org.apache.beam.sdk.io.questdb;
 import com.google.auto.value.AutoValue;
 import io.questdb.client.Sender;
 import io.questdb.client.Sender.LineSenderBuilder;
+
 import org.apache.beam.sdk.transforms.*;
 import org.apache.beam.sdk.transforms.display.DisplayData;
+import org.apache.beam.sdk.transforms.windowing.Sessions;
+import org.apache.beam.sdk.transforms.windowing.Window;
 import org.apache.beam.sdk.util.Preconditions;
+import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.PDone;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -149,28 +153,35 @@ public class QuestDbIO {
             checkArgument(table() != null, "withTable() is required");
 
             if (deduplicationEnabled()) {
-                PCollection keyedRows = null;
+
+                PCollection keydAndWindowed = null;
+
                 if (deduplicationByValue()) {
-                    keyedRows = (PCollection) input.apply(WithKeys.of(new SerializableFunction<QuestDbRow, Integer>() {
+                    keydAndWindowed = (PCollection) input.apply(WithKeys.of(new SerializableFunction<QuestDbRow, String>() {
                         @Override
-                        public Integer apply(QuestDbRow r) {
-                            return r.hashCodeWithoutDesignatedTimestamp();
+                        public String apply(QuestDbRow r) {
+                            return String.valueOf(r.hashCodeWithoutDesignatedTimestamp());
                         }
                     }));
                 } else {
-                    keyedRows = (PCollection) input.apply(WithKeys.of(new SerializableFunction<QuestDbRow, Integer>() {
+                    keydAndWindowed = (PCollection) input.apply(WithKeys.of(new SerializableFunction<QuestDbRow, String>() {
                         @Override
-                        public Integer apply(QuestDbRow r) {
-                            return r.hashCode();
+                        public String apply(QuestDbRow r) {
+                            return String.valueOf(r.hashCode());
                         }
                     }));
                 }
+                PCollection windowedItems = (PCollection)
+                        keydAndWindowed.apply(Window.<KV<String,String>>into(Sessions.withGapDuration(Duration.standardSeconds(deduplicationDurationMillis()))));
 
+                PCollection<QuestDbRow> uniqueRows = (PCollection<QuestDbRow>) ((PCollection) keydAndWindowed.apply(Deduplicate.keyedValues().withDuration(Duration.standardSeconds(deduplicationDurationMillis())))).apply(Values.create());
 
-                PCollection uniqueKeyedRows = (PCollection) keyedRows.apply(Deduplicate.keyedValues().withDuration(Duration.millis(deduplicationDurationMillis())));
-                input = (PCollection) uniqueKeyedRows.apply(Values.create());
+                uniqueRows.apply(ParDo.of(new QuestDbIO.Write.WriteFn(this)));
+
+            } else {
+                input.apply(ParDo.of(new QuestDbIO.Write.WriteFn(this)));
+
             }
-            input.apply(ParDo.of(new QuestDbIO.Write.WriteFn(this)));
             return PDone.in(input.getPipeline());
         }
 
