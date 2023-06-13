@@ -3,7 +3,6 @@ package org.apache.beam.sdk.io.questdb;
 import com.google.auto.value.AutoValue;
 import io.questdb.client.Sender;
 import io.questdb.client.Sender.LineSenderBuilder;
-
 import org.apache.beam.sdk.transforms.*;
 import org.apache.beam.sdk.transforms.display.DisplayData;
 import org.apache.beam.sdk.transforms.windowing.Sessions;
@@ -157,24 +156,37 @@ public class QuestDbIO {
                 PCollection keydAndWindowed = null;
 
                 if (deduplicationByValue()) {
-                    keydAndWindowed = (PCollection) input.apply(WithKeys.of(new SerializableFunction<QuestDbRow, String>() {
+                    keydAndWindowed = (PCollection) input.apply(WithKeys.of(new SerializableFunction<QuestDbRow, Integer >() {
                         @Override
-                        public String apply(QuestDbRow r) {
-                            return String.valueOf(r.hashCodeWithoutDesignatedTimestamp());
+                        public Integer apply(QuestDbRow r) {
+                            return r.hashCodeWithoutDesignatedTimestamp();
                         }
                     }));
                 } else {
-                    keydAndWindowed = (PCollection) input.apply(WithKeys.of(new SerializableFunction<QuestDbRow, String>() {
+                    keydAndWindowed = (PCollection) input.apply(WithKeys.of(new SerializableFunction<QuestDbRow, Integer>() {
                         @Override
-                        public String apply(QuestDbRow r) {
-                            return String.valueOf(r.hashCode());
+                        public Integer apply(QuestDbRow r) {
+                            return r.hashCode();
                         }
                     }));
                 }
                 PCollection windowedItems = (PCollection)
-                        keydAndWindowed.apply(Window.<KV<String,String>>into(Sessions.withGapDuration(Duration.standardSeconds(deduplicationDurationMillis()))));
+                        keydAndWindowed.apply(
+                                Window.
+                                        <KV<Integer, QuestDbRow>>into(
+                                                Sessions.
+                                                        withGapDuration(
+                                                                Duration.standardSeconds(deduplicationDurationMillis())
+                                                        )
+                                        )
+                        );
 
-                PCollection<QuestDbRow> uniqueRows = (PCollection<QuestDbRow>) ((PCollection) keydAndWindowed.apply(Deduplicate.keyedValues().withDuration(Duration.standardSeconds(deduplicationDurationMillis())))).apply(Values.create());
+                PCollection<QuestDbRow> uniqueRows = (PCollection<QuestDbRow>)
+                        ((PCollection) keydAndWindowed.apply(
+                                Deduplicate.keyedValues().withDuration(
+                                        Duration.standardSeconds(deduplicationDurationMillis()))
+                        )
+                        ).apply(Values.create());
 
                 uniqueRows.apply(ParDo.of(new QuestDbIO.Write.WriteFn(this)));
 
