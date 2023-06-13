@@ -183,8 +183,7 @@ public class QuestDbIO {
 
                 PCollection<QuestDbRow> uniqueRows = (PCollection<QuestDbRow>)
                         ((PCollection) keydAndWindowed.apply(
-                                Deduplicate.keyedValues().withDuration(
-                                        Duration.standardSeconds(deduplicationDurationMillis()))
+                                Deduplicate.keyedValues()
                         )
                         ).apply(Values.create());
 
